@@ -18,6 +18,12 @@ This repository is implementation of the ["Image Super-Resolution Using Deep Con
 - h5py 2.8.0
 - tqdm 4.30.0
 
+## install
+build conda using environment.yml
+
+then install pytorch (old versions of pytorch need [special commands](https://pytorch.org/get-started/previous-versions/#v100)):
+`conda install pytorch-cpu==1.0.0 torchvision-cpu==0.2.1 cpuonly -c pytorch`
+
 ## Train
 
 The 91-image, Set5 dataset converted to HDF5 can be downloaded from the links below.

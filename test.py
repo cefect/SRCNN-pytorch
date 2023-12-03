@@ -1,6 +1,9 @@
+"""use the calibrated model to downscale an image"""
+
+
 import argparse
 
-import torch
+import torch, os
 import torch.backends.cudnn as cudnn
 import numpy as np
 import PIL.Image as pil_image
@@ -10,17 +13,28 @@ from utils import convert_rgb_to_ycbcr, convert_ycbcr_to_rgb, calc_psnr
 
 
 if __name__ == '__main__':
+    #===========================================================================
+    # setup
+    #===========================================================================
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights-file', type=str, required=True)
     parser.add_argument('--image-file', type=str, required=True)
     parser.add_argument('--scale', type=int, default=3)
+    parser.add_argument('--outdir', type=str, default=os.getcwd())
     args = parser.parse_args()
 
     cudnn.benchmark = True
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    print(f'running on device: {device}')
 
+    #===========================================================================
+    # init
+    #===========================================================================
     model = SRCNN().to(device)
 
+    #===========================================================================
+    # load the saved parameters onto the model
+    #===========================================================================
     state_dict = model.state_dict()
     for n, p in torch.load(args.weights_file, map_location=lambda storage, loc: storage).items():
         if n in state_dict.keys():
@@ -29,7 +43,11 @@ if __name__ == '__main__':
             raise KeyError(n)
 
     model.eval()
-
+    
+    #===========================================================================
+    # load and pre-process image
+    #===========================================================================
+    print(f'loading and pre-processing image from {args.image_file}')
     image = pil_image.open(args.image_file).convert('RGB')
 
     image_width = (image.width // args.scale) * args.scale
@@ -39,6 +57,9 @@ if __name__ == '__main__':
     image = image.resize((image.width * args.scale, image.height * args.scale), resample=pil_image.BICUBIC)
     image.save(args.image_file.replace('.', '_bicubic_x{}.'.format(args.scale)))
 
+    #===========================================================================
+    # prep the image
+    #===========================================================================
     image = np.array(image).astype(np.float32)
     ycbcr = convert_rgb_to_ycbcr(image)
 
@@ -47,15 +68,36 @@ if __name__ == '__main__':
     y = torch.from_numpy(y).to(device)
     y = y.unsqueeze(0).unsqueeze(0)
 
+    #===========================================================================
+    # downsacle with model
+    #===========================================================================
+    print(f'downscaling')
     with torch.no_grad():
         preds = model(y).clamp(0.0, 1.0)
 
+    #===========================================================================
+    # calc result
+    #===========================================================================
     psnr = calc_psnr(y, preds)
     print('PSNR: {:.2f}'.format(psnr))
 
     preds = preds.mul(255.0).cpu().numpy().squeeze(0).squeeze(0)
 
+    #===========================================================================
+    # save result
+    #===========================================================================
+    out_dir = args.outdir
+    if not os.path.exists(out_dir):os.makedirs(out_dir)
+    
     output = np.array([preds, ycbcr[..., 1], ycbcr[..., 2]]).transpose([1, 2, 0])
     output = np.clip(convert_ycbcr_to_rgb(output), 0.0, 255.0).astype(np.uint8)
     output = pil_image.fromarray(output)
-    output.save(args.image_file.replace('.', '_srcnn_x{}.'.format(args.scale)))
+    
+    ofp = os.path.join(out_dir, 
+                       os.path.basename(args.image_file.replace('.', '_srcnn_x{}.'.format(args.scale))),
+                       )
+    output.save(ofp)
+    
+    print(f'image saved to {ofp}')
+    
+    

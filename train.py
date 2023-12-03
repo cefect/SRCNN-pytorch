@@ -78,10 +78,12 @@ if __name__ == '__main__':
     #===========================================================================
     # train loop
     #===========================================================================
+    
     print(f'start training {args.num_epochs} loops\n-------------------')
     best_weights = copy.deepcopy(model.state_dict())
     best_epoch = 0
     best_psnr = 0.0
+    backprops=0
 
     for epoch in range(args.num_epochs):
         model.train()
@@ -108,6 +110,7 @@ if __name__ == '__main__':
 
                 t.set_postfix(loss='{:.6f}'.format(epoch_losses.avg))
                 t.update(len(inputs))
+                backprops += 1
 
         #=======================================================================
         # write these epoch parameters
@@ -134,7 +137,7 @@ if __name__ == '__main__':
 
             epoch_psnr.update(calc_psnr(preds, labels), len(inputs))
 
-        print('eval psnr: {:.2f}'.format(epoch_psnr.avg))
+        print('eval psnr: {:.2f} (backprops={})'.format(epoch_psnr.avg, backprops))
         
         #wrap eval
         if epoch_psnr.avg > best_psnr:

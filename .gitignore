@@ -5,3 +5,4 @@ download
 *__pycache__*
 .project
 .pydevproject
+/.pytest_cache/

@@ -2,6 +2,9 @@ from torch import nn
 
 
 class SRCNN(nn.Module):
+    """Super-Resolution Convolutional Neural Network (SRCNN)
+    with 3x2D convolution layers
+    """
     def __init__(self, num_channels=1):
         super(SRCNN, self).__init__()
         self.conv1 = nn.Conv2d(num_channels, 64, kernel_size=9, padding=9 // 2)

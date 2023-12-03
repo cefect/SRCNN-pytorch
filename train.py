@@ -1,3 +1,5 @@
+"""train the SCRNN aginst a dataset with labels"""
+
 import argparse
 import os
 import copy
@@ -15,28 +17,40 @@ from utils import AverageMeter, calc_psnr
 
 
 if __name__ == '__main__':
+    #set the argparser
     parser = argparse.ArgumentParser()
     parser.add_argument('--train-file', type=str, required=True)
     parser.add_argument('--eval-file', type=str, required=True)
     parser.add_argument('--outputs-dir', type=str, required=True)
     parser.add_argument('--scale', type=int, default=3)
-    parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--batch-size', type=int, default=16)
+    parser.add_argument('--lr', type=float, default=1e-4, help='optimizer learning rate')
+    parser.add_argument('--batch-size', type=int, default=16, help='data batches')
     parser.add_argument('--num-epochs', type=int, default=400)
-    parser.add_argument('--num-workers', type=int, default=8)
+    parser.add_argument('--num-workers', type=int, default=8, help='DataLoading subprocesses to use for data            loading')
     parser.add_argument('--seed', type=int, default=123)
     args = parser.parse_args()
-
+    
+    #===========================================================================
+    # setup
+    #===========================================================================
+    #configure outputs
     args.outputs_dir = os.path.join(args.outputs_dir, 'x{}'.format(args.scale))
 
     if not os.path.exists(args.outputs_dir):
         os.makedirs(args.outputs_dir)
 
+    #set device
     cudnn.benchmark = True
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    print(f'running on device: {device}')
 
+    
     torch.manual_seed(args.seed)
 
+    #===========================================================================
+    # initialize
+    #===========================================================================
+    print('init model')
     model = SRCNN().to(device)
     criterion = nn.MSELoss()
     optimizer = optim.Adam([
@@ -45,6 +59,10 @@ if __name__ == '__main__':
         {'params': model.conv3.parameters(), 'lr': args.lr * 0.1}
     ], lr=args.lr)
 
+    #===========================================================================
+    # data
+    #===========================================================================
+    print(f'init data')
     train_dataset = TrainDataset(args.train_file)
     train_dataloader = DataLoader(dataset=train_dataset,
                                   batch_size=args.batch_size,
@@ -52,9 +70,15 @@ if __name__ == '__main__':
                                   num_workers=args.num_workers,
                                   pin_memory=True,
                                   drop_last=True)
+    
+    #eval data
     eval_dataset = EvalDataset(args.eval_file)
     eval_dataloader = DataLoader(dataset=eval_dataset, batch_size=1)
 
+    #===========================================================================
+    # train loop
+    #===========================================================================
+    print(f'start training {args.num_epochs} loops\n-------------------')
     best_weights = copy.deepcopy(model.state_dict())
     best_epoch = 0
     best_psnr = 0.0
@@ -85,8 +109,17 @@ if __name__ == '__main__':
                 t.set_postfix(loss='{:.6f}'.format(epoch_losses.avg))
                 t.update(len(inputs))
 
-        torch.save(model.state_dict(), os.path.join(args.outputs_dir, 'epoch_{}.pth'.format(epoch)))
-
+        #=======================================================================
+        # write these epoch parameters
+        #=======================================================================
+        model_fp = 'epoch_{}.pth'.format(epoch)
+        print(f'saving model state to {model_fp}')        
+        torch.save(model.state_dict(), os.path.join(args.outputs_dir, model_fp))
+        
+        #=======================================================================
+        # evaluate this epoch
+        #=======================================================================
+        print(f'evaluating against {args.batch_size} batches')
         model.eval()
         epoch_psnr = AverageMeter()
 
@@ -102,11 +135,15 @@ if __name__ == '__main__':
             epoch_psnr.update(calc_psnr(preds, labels), len(inputs))
 
         print('eval psnr: {:.2f}'.format(epoch_psnr.avg))
-
+        
+        #wrap eval
         if epoch_psnr.avg > best_psnr:
             best_epoch = epoch
             best_psnr = epoch_psnr.avg
             best_weights = copy.deepcopy(model.state_dict())
 
+    #===========================================================================
+    # wrap
+    #===========================================================================
     print('best epoch: {}, psnr: {:.2f}'.format(best_epoch, best_psnr))
     torch.save(best_weights, os.path.join(args.outputs_dir, 'best.pth'))

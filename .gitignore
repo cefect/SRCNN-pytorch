@@ -3,3 +3,5 @@
 env
 download
 *__pycache__*
+.project
+.pydevproject

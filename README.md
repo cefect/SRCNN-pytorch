@@ -22,7 +22,34 @@ This repository is implementation of the ["Image Super-Resolution Using Deep Con
 build conda using environment.yml
 
 then install pytorch (old versions of pytorch need [special commands](https://pytorch.org/get-started/previous-versions/#v100)):
+
+### cpu only
 `conda install pytorch-cpu==1.0.0 torchvision-cpu==0.2.1 cpuonly -c pytorch`
+
+### CUDA 10.0
+
+#### conda
+cant find in channel...
+`conda install pytorch==1.0.0 torchvision==0.2.1 cuda100 -c pytorch`
+
+#### pip/wheel
+- download wheel [torch-1.0.0-cp37-cp37m-win_amd64.whl](https://download.pytorch.org/whl/cu100/torch-1.0.0-cp37-cp37m-win_amd64.whl)
+- install via pip: `pip install torch-1.0.0-cp37-cp37m-win_amd64.whl`
+- install torchvision via pip: `pip install torchvision==0.2.1`
+
+### test build
+```
+import torch
+print(torch.__version__)
+
+
+import torchvision
+print(torchvision.__version__)
+
+print(f"cuda available: {torch.cuda.is_available()}")
+
+```
+
 
 ## Train
 

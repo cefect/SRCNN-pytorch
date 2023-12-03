@@ -51,7 +51,10 @@ if __name__ == '__main__':
     # initialize
     #===========================================================================
     print('init model')
-    model = SRCNN().to(device)
+    model = SRCNN(
+        num_channels=1, #only training on y-channel
+        ).to(device)
+        
     criterion = nn.MSELoss()
     optimizer = optim.Adam([
         {'params': model.conv1.parameters()},

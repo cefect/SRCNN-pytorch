@@ -11,6 +11,8 @@ from PIL import Image
 from torch.utils.data.dataloader import DataLoader
 from datasets import EvalDataset
 
+from utils import convert_ycbcr_to_rgb
+
 def extract_images(
         data_file,
         out_dir = os.getcwd(),
@@ -20,6 +22,8 @@ def extract_images(
     
     
     NOTE: the data format is challenging to work with...
+    the images may have originally been RGB,
+    but the provided .h5 files only contain the y-channel of YCbCr
     """
     assert os.path.exists(data_file)
     
@@ -34,6 +38,8 @@ def extract_images(
             
             # Convert the dataset to a numpy array
             lr_array = np.array(lr_image)
+            
+            convert_ycbcr_to_rgb(lr_array)
             
             # Normalize the array to 0-255
             lr_array = ((lr_array - lr_array.min()) * (255 / (lr_array.max() - lr_array.min()))).astype(np.uint8)

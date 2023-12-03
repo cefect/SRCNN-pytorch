@@ -3,6 +3,11 @@ import numpy as np
 
 
 def convert_rgb_to_y(img):
+    """
+    convert the RGB images to the Y channel of the YCbCr color space. 
+    This function indeed reduces the number of channels from 3 (Red, Green, Blue) to 1 (Luminance or Y channel). 
+    The Y channel is used because it contains luminance (brightness) information, which is more important for the human perception of images than color information.
+    """
     if type(img) == np.ndarray:
         return 16. + (64.738 * img[:, :, 0] + 129.057 * img[:, :, 1] + 25.064 * img[:, :, 2]) / 256.
     elif type(img) == torch.Tensor:

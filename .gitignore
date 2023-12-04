@@ -6,3 +6,4 @@ download
 .project
 .pydevproject
 /.pytest_cache/
+env2

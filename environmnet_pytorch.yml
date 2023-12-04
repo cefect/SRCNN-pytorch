@@ -1,0 +1,9 @@
+name: srcnn2
+channels:
+  - pytorch
+  - nvidia
+dependencies:
+  - pytorch=2.1.*
+  - torchvision 
+  - pytorch-cuda=12.1
+ 
